@@ -220,13 +220,10 @@ For questions about the project, feel free to reach out to any of the lead autho
 ## Citation
 Please cite our paper if you find our work helpful:
 ```bibtex
-@misc{lobba2025inversevirtualtryongenerating,
-      title={Inverse Virtual Try-On: Generating Multi-Category Product-Style Images from Clothed Individuals}, 
-      author={Davide Lobba and Fulvio Sanguigni and Bin Ren and Marcella Cornia and Rita Cucchiara and Nicu Sebe},
-      year={2025},
-      eprint={2505.21062},
-      archivePrefix={arXiv},
-      primaryClass={cs.CV},
-      url={https://arxiv.org/abs/2505.21062},
+@article{lobba2025inverse,
+  title={Inverse Virtual Try-On: Generating Multi-Category Product-Style Images from Clothed Individuals},
+  author={Lobba, Davide and Sanguigni, Fulvio and Ren, Bin and Cornia, Marcella and Cucchiara, Rita and Sebe, Nicu},
+  journal={arXiv preprint arXiv:2505.21062},
+  year={2025}
 }
 ```
