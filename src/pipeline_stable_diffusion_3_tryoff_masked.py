@@ -889,7 +889,7 @@ class StableDiffusion3TryOffPipelineMasked(DiffusionPipeline, SD3LoraLoaderMixin
 
         lora_scale = self.joint_attention_kwargs.get("scale", None) if self.joint_attention_kwargs is not None else None
 
-        embed_time = time.tim()
+        embed_time = time.time()
 
         if vton_image_embeds is None:
             vton_image_vit = self.vit_processing(images=vton_image, return_tensors="pt").data["pixel_values"]
