@@ -162,7 +162,7 @@ def main(args):
     )
 
     pipeline.to(device, dtype=weight_dtype)
-    logging.info(f"Model load time: {time.time() - model_load_time:.4f}")
+    print(f"Model load time: {time.time() - model_load_time:.4f}")
 
     # load data
     data_load_time = time.time()
@@ -184,7 +184,7 @@ def main(args):
     image_binary_mask = image_binary_mask.resize((args.width, args.height))
 
     generator = torch.Generator(device=device).manual_seed(args.seed) if args.seed else None
-    logging.info(f"Data load time: {time.time() - data_load_time:.4f}")
+    print(f"Data load time: {time.time() - data_load_time:.4f}")
 
     # Inferecen Time
     total_inference_time = time.time()
@@ -199,7 +199,7 @@ def main(args):
         mask_input=image_binary_mask,
         image_input_masked=image_fine_mask,
     ).images[0]
-    logging.info(f"Total Inference Time: {time.time() - total_inference_time:.4f}")
+    print(f"Total Inference Time: {time.time() - total_inference_time:.4f}")
 
     image.save(f"{args.output_dir}/{image_name}_output.png")
 
