@@ -880,7 +880,7 @@ class StableDiffusion3TryOffPipelineMasked(DiffusionPipeline, SD3LoraLoaderMixin
         self._clip_skip = clip_skip
         self._joint_attention_kwargs = joint_attention_kwargs
         self._interrupt = False
-        logger.debug(f"Input Check time: {time.time() - check_input_time:.4f}")
+        logger.info(f"Input Check time: {time.time() - check_input_time:.4f}")
 
         # 2. Define call parameters
         batch_size = vton_image.shape[0]
@@ -931,13 +931,13 @@ class StableDiffusion3TryOffPipelineMasked(DiffusionPipeline, SD3LoraLoaderMixin
                 original_pooled_prompt_embeds = pooled_prompt_embeds
             prompt_embeds = torch.cat([negative_prompt_embeds, prompt_embeds], dim=0)
             pooled_prompt_embeds = torch.cat([negative_pooled_prompt_embeds, pooled_prompt_embeds], dim=0)
-        logger.debug(f"Embed time: {time.time() - embed_time:.4f}")
+        logger.info(f"Embed time: {time.time() - embed_time:.4f}")
         # 4. Prepare timesteps
         prepare_timestep_time = time.time()
         timesteps, num_inference_steps = retrieve_timesteps(self.scheduler, num_inference_steps, device, timesteps)
         num_warmup_steps = max(len(timesteps) - num_inference_steps * self.scheduler.order, 0)
         self._num_timesteps = len(timesteps)
-        logger.debug(f"Prepare timesteps time: {time.time() - prepare_timestep_time:.4f}")
+        logger.info(f"Prepare timesteps time: {time.time() - prepare_timestep_time:.4f}")
 
         # 5. Prepare latent variables
         prepare_latents_time = time.time()
@@ -984,7 +984,7 @@ class StableDiffusion3TryOffPipelineMasked(DiffusionPipeline, SD3LoraLoaderMixin
             torch.cat([vton_model_latents] * 2) if self.do_classifier_free_guidance else vton_model_latents
         )
         vton_model_input = torch.cat([vton_model_input, mask, masked_vton_latents], dim=1)
-        logger.debug(f"Prepare latents time: {time.time() - prepare_latents_time:.4f}")
+        logger.info(f"Prepare latents time: {time.time() - prepare_latents_time:.4f}")
 
         # 6. Denoising loop
         denoising_time = time.time()
@@ -1045,7 +1045,7 @@ class StableDiffusion3TryOffPipelineMasked(DiffusionPipeline, SD3LoraLoaderMixin
                 if XLA_AVAILABLE:
                     xm.mark_step()
 
-        logger.debug(f"Denoising time: {time.time() - denoising_time:.4f}")
+        logger.info(f"Denoising time: {time.time() - denoising_time:.4f}")
 
         postprocess_time = time.time()
         if output_type == "latent":
@@ -1056,7 +1056,7 @@ class StableDiffusion3TryOffPipelineMasked(DiffusionPipeline, SD3LoraLoaderMixin
 
             image = self.vae.decode(latents, return_dict=False)[0]
             image = self.image_processor.postprocess(image, output_type=output_type)
-        logger.debug(f"Postprocess time: {time.time() - postprocess_time:.4f}")
+        logger.info(f"Postprocess time: {time.time() - postprocess_time:.4f}")
         # Offload all models
         self.maybe_free_model_hooks()
 
