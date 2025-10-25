@@ -169,10 +169,10 @@ def main(args):
 
         # Load Image Encoders
         image_encoder_large = CLIPVisionModelWithProjection.from_pretrained(
-            "openai/clip-vit-large-patch14"
+            "models/clip-vit-large-patch14"
         )
         image_encoder_bigG = CLIPVisionModelWithProjection.from_pretrained(
-            "laion/CLIP-ViT-bigG-14-laion2B-39B-b160k"
+            "models/clip-vit-bigg-14-laion2b"
         )
 
         # --- 3. Assemble and Prepare Pipeline ---
@@ -315,13 +315,13 @@ if __name__ == "__main__":
     model_group.add_argument(
         "--pretrained_model_name_or_path",
         type=str,
-        default="stabilityai/stable-diffusion-3-medium-diffusers",
+        default="models/sd3-medium-diffusers",
         help="Base SD3 model path from Hugging Face or local directory.",
     )
     model_group.add_argument(
         "--pretrained_model_name_or_path_sd3_tryoff",
         type=str,
-        default="stankiem/sd3-tryoff-v0.1",
+        default="models/sd3-tryoff-v0.1",
         help="Path to the specialized SD3 Try-Off transformer model.",
     )
     model_group.add_argument(
