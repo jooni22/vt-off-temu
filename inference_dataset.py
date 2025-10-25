@@ -7,8 +7,12 @@ from diffusers import (
     FlowMatchEulerDiscreteScheduler,
 )
 from src.transformer_vtoff import SD3Transformer2DModel
-from src.transformer_sd3_garm import SD3Transformer2DModel as SD3Transformer2DModel_feature_extractor
-from src.pipeline_stable_diffusion_3_tryoff_masked import StableDiffusion3TryOffPipelineMasked
+from src.transformer_sd3_garm import (
+    SD3Transformer2DModel as SD3Transformer2DModel_feature_extractor,
+)
+from src.pipeline_stable_diffusion_3_tryoff_masked import (
+    StableDiffusion3TryOffPipelineMasked,
+)
 from transformers import CLIPVisionModelWithProjection
 
 from dataset.dresscode import DressCodeDataset
@@ -36,7 +40,7 @@ def main(args):
     noise_scheduler = FlowMatchEulerDiscreteScheduler.from_pretrained(
         args.pretrained_model_name_or_path, subfolder="scheduler"
     )
-    
+
     vae = AutoencoderKL.from_pretrained(
         args.pretrained_model_name_or_path,
         subfolder="vae",
@@ -44,15 +48,33 @@ def main(args):
         variant=args.variant,
     )
     transformer = SD3Transformer2DModel.from_pretrained(
-        args.pretrained_model_name_or_path_sd3_tryoff, subfolder="transformer", revision=args.revision, variant=args.variant
+        args.pretrained_model_name_or_path_sd3_tryoff,
+        subfolder="transformer",
+        revision=args.revision,
+        variant=args.variant,
     )
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
-    transformer_vton_feature_extractor = SD3Transformer2DModel_feature_extractor.from_pretrained(
-        args.pretrained_model_name_or_path_sd3_tryoff, subfolder="transformer_vton", revision=args.revision, variant=args.variant
+    transformer_vton_feature_extractor = (
+        SD3Transformer2DModel_feature_extractor.from_pretrained(
+            args.pretrained_model_name_or_path_sd3_tryoff,
+            subfolder="transformer_vton",
+            revision=args.revision,
+            variant=args.variant,
+        )
     )
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
-    image_encoder_large = CLIPVisionModelWithProjection.from_pretrained("openai/clip-vit-large-patch14").to(device=device, dtype=weight_dtype)
-    image_encoder_bigG = CLIPVisionModelWithProjection.from_pretrained("laion/CLIP-ViT-bigG-14-laion2B-39B-b160k").to(device=device, dtype=weight_dtype)
+    image_encoder_large = CLIPVisionModelWithProjection.from_pretrained(
+        "openai/clip-vit-large-patch14"
+    ).to(device=device, dtype=weight_dtype)
+    image_encoder_bigG = CLIPVisionModelWithProjection.from_pretrained(
+        "laion/CLIP-ViT-bigG-14-laion2B-39B-b160k"
+    ).to(device=device, dtype=weight_dtype)
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     pipeline = StableDiffusion3TryOffPipelineMasked(
@@ -71,13 +93,33 @@ def main(args):
     )
 
     pipeline.to(device, dtype=weight_dtype)
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
     if not args.fine_mask:
-        outputlist = ['category', 'image', 'im_name', 'vton_image_embeddings', 'clip_embeds', 't5_embeds', 'clip_pooled',
-                      'inpaint_mask', 'im_mask']
+        outputlist = [
+            "category",
+            "image",
+            "im_name",
+            "vton_image_embeddings",
+            "clip_embeds",
+            "t5_embeds",
+            "clip_pooled",
+            "inpaint_mask",
+            "im_mask",
+        ]
     else:
-        outputlist = ['category', 'image', 'im_name', 'vton_image_embeddings', 'clip_embeds', 't5_embeds', 'clip_pooled',
-                      'parse_cloth', 'im_mask_fine']
+        outputlist = [
+            "category",
+            "image",
+            "im_name",
+            "vton_image_embeddings",
+            "clip_embeds",
+            "t5_embeds",
+            "clip_pooled",
+            "parse_cloth",
+            "im_mask_fine",
+        ]
 
     if args.dataset_name == "dresscode":
         if args.category == "all":
@@ -94,7 +136,7 @@ def main(args):
             category=args.category,
             mask_type=args.mask_type,
             size=(args.height, args.width),
-            coarse_caption_file=args.coarse_caption_file
+            coarse_caption_file=args.coarse_caption_file,
         )
     elif args.dataset_name == "vitonhd":
         dataset = VitonHDDataset(
@@ -105,7 +147,7 @@ def main(args):
             outputlist=outputlist,
             size=(args.height, args.width),
             mask_type=args.mask_type,
-            caption_file=args.coarse_caption_file
+            caption_file=args.coarse_caption_file,
         )
     else:
         raise ValueError(f"Unsupported dataset: {args.dataset_name}")
@@ -118,10 +160,30 @@ def main(args):
         pin_memory=True,
     )
 
-    empty_string_pooled_prompt_embeds = torch.load(Path(args.dataset_root).parent / "empty_string_embeddings" / "CLIP_VIT_L_VIT_G_concat_pooled" / "empty_string.pt", map_location="cpu").to(device, dtype=weight_dtype)
-    empty_string_clip_prompt_embeds = torch.load(Path(args.dataset_root).parent / "empty_string_embeddings" / "CLIP_VIT_L_VIT_G_concat" / "empty_string.pt", map_location="cpu").to(device, dtype=weight_dtype)
-    empty_string_t5_prompt_embeds = torch.load(Path(args.dataset_root).parent / "empty_string_embeddings" / "T5_XXL" / "empty_string.pt", map_location="cpu").to(device, dtype=weight_dtype)
-    negative_text_embeds = torch.cat([empty_string_clip_prompt_embeds, empty_string_t5_prompt_embeds], dim=1)
+    empty_string_pooled_prompt_embeds = torch.load(
+        Path(args.dataset_root).parent
+        / "empty_string_embeddings"
+        / "CLIP_VIT_L_VIT_G_concat_pooled"
+        / "empty_string.pt",
+        map_location="cpu",
+    ).to(device, dtype=weight_dtype)
+    empty_string_clip_prompt_embeds = torch.load(
+        Path(args.dataset_root).parent
+        / "empty_string_embeddings"
+        / "CLIP_VIT_L_VIT_G_concat"
+        / "empty_string.pt",
+        map_location="cpu",
+    ).to(device, dtype=weight_dtype)
+    empty_string_t5_prompt_embeds = torch.load(
+        Path(args.dataset_root).parent
+        / "empty_string_embeddings"
+        / "T5_XXL"
+        / "empty_string.pt",
+        map_location="cpu",
+    ).to(device, dtype=weight_dtype)
+    negative_text_embeds = torch.cat(
+        [empty_string_clip_prompt_embeds, empty_string_t5_prompt_embeds], dim=1
+    )
     negative_pooled_embeds = empty_string_pooled_prompt_embeds
 
     negative_text_embeds = negative_text_embeds.repeat(args.batch_size, 1, 1)
@@ -130,11 +192,17 @@ def main(args):
     for batch in tqdm(dataloader):
         image = batch.get("image").to(device=device)
         image_name = batch.get("im_name")
-        image = (image+1)/2  #from [-1, 1] to [0, 1]
-        clip_text_embeddings = batch.get("clip_embeds").to(device=device, dtype=weight_dtype)
-        t5_text_embeddings = batch.get("t5_embeds").to(device=device, dtype=weight_dtype)
-        clip_pooled_embeddings = batch.get("clip_pooled").to(device=device).to(dtype=weight_dtype)
-        text_embeddings=torch.cat([clip_text_embeddings, t5_text_embeddings], dim=1)
+        image = (image + 1) / 2  # from [-1, 1] to [0, 1]
+        clip_text_embeddings = batch.get("clip_embeds").to(
+            device=device, dtype=weight_dtype
+        )
+        t5_text_embeddings = batch.get("t5_embeds").to(
+            device=device, dtype=weight_dtype
+        )
+        clip_pooled_embeddings = (
+            batch.get("clip_pooled").to(device=device).to(dtype=weight_dtype)
+        )
+        text_embeddings = torch.cat([clip_text_embeddings, t5_text_embeddings], dim=1)
         if not args.fine_mask:
             masked_vton_img = batch.get("im_mask").to(device=device)
             inpaint_mask = batch.get("inpaint_mask").to(device=device)
@@ -143,31 +211,39 @@ def main(args):
             inpaint_mask = batch.get("parse_cloth").to(device=device)
         if len(inpaint_mask.shape) == 3:
             inpaint_mask = inpaint_mask.unsqueeze(1)
-            
+
         masked_vton_img = masked_vton_img.to(dtype=weight_dtype)
         inpaint_mask = inpaint_mask.to(dtype=weight_dtype)
-        
-        generator = torch.Generator(device=device).manual_seed(args.seed) if args.seed else None
-        
-        images = pipeline(
-            prompt_embeds = text_embeddings,
-            pooled_prompt_embeds = clip_pooled_embeddings,
-            negative_prompt_embeds = negative_text_embeds,
-            negative_pooled_prompt_embeds = negative_pooled_embeds,
-            height=args.height,
-            width=args.width,
-            guidance_scale=args.guidance_scale,
-            num_inference_steps=args.num_inference_steps,
-            generator=generator,
-            vton_image=image,
-            mask_input=inpaint_mask,
-            image_input_masked=masked_vton_img,
-        ).images
-        
+
+        generator = (
+            torch.Generator(device=device).manual_seed(args.seed) if args.seed else None
+        )
+
+        with torch.inference_mode():
+            images = pipeline(
+                prompt_embeds=text_embeddings,
+                pooled_prompt_embeds=clip_pooled_embeddings,
+                negative_prompt_embeds=negative_text_embeds,
+                negative_pooled_prompt_embeds=negative_pooled_embeds,
+                height=args.height,
+                width=args.width,
+                guidance_scale=args.guidance_scale,
+                num_inference_steps=args.num_inference_steps,
+                generator=generator,
+                vton_image=image,
+                mask_input=inpaint_mask,
+                image_input_masked=masked_vton_img,
+            ).images
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
         for i in range(len(images)):
             category = batch.get("category")[i]
             os.makedirs(f"{os.path.join(args.output_dir, category)}", exist_ok=True)
-            images[i].save(f"{os.path.join(args.output_dir, category)}/{image_name[i].split('.')[0]}.png")
+            images[i].save(
+                f"{os.path.join(args.output_dir, category)}/{image_name[i].split('.')[0]}.png"
+            )
 
 
 if __name__ == "__main__":

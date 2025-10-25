@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Minimal inference script for TEMU-VTOFF with progress monitoring
-# Optimized for lower-end GPU (Tesla M40)
+# Optimized for lower-end GPU (Tesla M40) using the optimized script
 
-echo "=== TEMU-VTOFF Minimal Inference Script ==="
+echo "=== TEMU-VTOFF Minimal Inference Script (Optimized) ==="
 echo ""
 
 # Set HuggingFace cache directory
@@ -26,6 +26,7 @@ HEIGHT=640
 STEPS=10
 GUIDANCE=2.0
 PRECISION="fp16"
+MAX_VRAM=10.0 # VRAM limit in GB for Tesla M40 (12GB total)
 
 echo ""
 echo "=== Inference Settings (Minimal) ==="
@@ -33,6 +34,7 @@ echo "Resolution: ${WIDTH}x${HEIGHT}"
 echo "Inference Steps: ${STEPS}"
 echo "Guidance Scale: ${GUIDANCE}"
 echo "Precision: ${PRECISION}"
+echo "VRAM Limit: ${MAX_VRAM} GB"
 echo ""
 
 echo "=== Starting Inference ==="
@@ -40,7 +42,7 @@ echo "Note: First run will download models (~5-10GB). This may take 10-30 minute
 echo "Models will be cached in ./hf_models for future use."
 echo ""
 
-python inference.py \
+python inference_optimized.py \
     --pretrained_model_name_or_path "stabilityai/stable-diffusion-3-medium-diffusers" \
     --pretrained_model_name_or_path_sd3_tryoff "davidelobba/TEMU-VTOFF" \
     --seed 42 \
@@ -50,7 +52,8 @@ python inference.py \
     --mixed_precision "$PRECISION" \
     --example_image "examples/example1.jpg" \
     --guidance_scale $GUIDANCE \
-    --num_inference_steps $STEPS
+    --num_inference_steps $STEPS \
+    --max_vram_gb $MAX_VRAM
 
 if [ $? -eq 0 ]; then
     echo ""

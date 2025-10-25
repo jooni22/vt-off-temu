@@ -8,7 +8,7 @@ __pycache__/
 *$py.class
 # C extensions
 *.so
-hf_models
+hf_models/
 # Distribution / packaging
 .Python
 build/

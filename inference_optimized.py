@@ -85,10 +85,21 @@ def main(args):
     # Check GPU and set device
     if torch.cuda.is_available() and "NVIDIA" in torch.cuda.get_device_name(0):
         device = torch.device("cuda:0")
+        total_vram_gb = torch.cuda.get_device_properties(0).total_memory / (1024**3)
         print(f"✓ Using NVIDIA GPU: {torch.cuda.get_device_name(0)}")
-        print(
-            f"✓ VRAM Available: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB"
-        )
+        print(f"✓ VRAM Available: {total_vram_gb:.1f} GB")
+
+        if args.max_vram_gb:
+            if args.max_vram_gb < total_vram_gb:
+                fraction = args.max_vram_gb / total_vram_gb
+                torch.cuda.set_per_process_memory_fraction(fraction, 0)
+                print(
+                    f"✓ Attempting to limit VRAM to {args.max_vram_gb:.1f} GB (Fraction: {fraction:.2f})"
+                )
+            else:
+                print(
+                    f"⚠ Requested VRAM limit ({args.max_vram_gb} GB) is >= total VRAM ({total_vram_gb:.1f} GB). Ignoring."
+                )
     else:
         device = torch.device("cpu")
         print("⚠ Using CPU - this will be very slow!")
@@ -216,6 +227,13 @@ def main(args):
     pipeline.to(device, dtype=weight_dtype)
     print("✓ Pipeline ready")
 
+    # Enable memory-efficient attention
+    try:
+        pipeline.enable_xformers_memory_efficient_attention()
+        print("✓ Memory-efficient attention (xformers) enabled.")
+    except Exception:
+        print("⚠ Could not enable xformers, proceeding without it.")
+
     # Clear cache after loading
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
@@ -258,11 +276,47 @@ def main(args):
     )
     print(f"✓ Random seed: {args.seed}")
     print("")
-    print(f"Generating image... (this may take several minutes)")
 
-    with torch.no_grad():
+    # Manually encode prompt to allow for text encoder offloading
+    print("Encoding prompt...")
+    # Note: Assuming the pipeline has a .encode_prompt() method similar to diffusers' SD3.
+    (
+        prompt_embeds,
+        negative_prompt_embeds,
+        pooled_prompt_embeds,
+        negative_pooled_prompt_embeds,
+    ) = pipeline.encode_prompt(
+        prompt=caption,
+        device=device,
+        num_images_per_prompt=1,
+        do_classifier_free_guidance=args.guidance_scale > 1.0,
+        negative_prompt="",  # No negative prompt used in original script
+    )
+    print("✓ Prompt encoded")
+
+    # Offload text encoders to CPU
+    print("Offloading text encoders to CPU to save VRAM...")
+    if hasattr(pipeline, "text_encoder") and pipeline.text_encoder is not None:
+        pipeline.text_encoder.to("cpu")
+    if hasattr(pipeline, "text_encoder_2") and pipeline.text_encoder_2 is not None:
+        pipeline.text_encoder_2.to("cpu")
+    if hasattr(pipeline, "text_encoder_3") and pipeline.text_encoder_3 is not None:
+        pipeline.text_encoder_3.to("cpu")
+
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        gc.collect()
+        print(
+            f"✓ GPU Memory after offload: {torch.cuda.memory_allocated() / 1024**3:.2f} GB"
+        )
+
+    print(f"Generating image... (this may take several minutes)")
+    with torch.inference_mode():
         image = pipeline(
-            prompt=caption,
+            prompt_embeds=prompt_embeds,
+            negative_prompt_embeds=negative_prompt_embeds,
+            pooled_prompt_embeds=pooled_prompt_embeds,
+            negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
             height=args.height,
             width=args.width,
             guidance_scale=args.guidance_scale,
@@ -377,6 +431,13 @@ if __name__ == "__main__":
         default=10,
         required=False,
         help="Number of denoising steps (10 for fast, 28 for quality)",
+    )
+    parser.add_argument(
+        "--max_vram_gb",
+        type=float,
+        default=None,
+        required=False,
+        help="Attempt to limit VRAM usage to this amount in GB.",
     )
     args = parser.parse_args()
     main(args)
