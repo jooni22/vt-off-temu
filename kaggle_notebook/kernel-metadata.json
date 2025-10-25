@@ -1,0 +1,8 @@
+{
+  "id": "jooni22/temu-vtoff-inference",
+  "title": "TEMU-VTOFF-inference",
+  "code_file": "temu-vtoff-inference.py",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": "true"
+}
